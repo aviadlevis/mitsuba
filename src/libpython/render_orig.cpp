@@ -1,6 +1,5 @@
 #include "base.h"
 #include <mitsuba/render/scene.h>
-#include <mitsuba/render/scene.h>
 #include <mitsuba/render/scenehandler.h>
 #include <mitsuba/render/renderqueue.h>
 #include <mitsuba/render/renderjob.h>
@@ -675,14 +674,6 @@ void export_render() {
 		.def("hasAlpha", &Film::hasAlpha)
 		.def("getReconstructionFilter", film_getreconstructionfilter, BP_RETURN_VALUE);
 
-    BP_CLASS(Medium, NetworkedObject, bp::no_init)
-        .def("getPhaseFunction", &Medium::getPhaseFunction, BP_RETURN_VALUE)
-        .def("getSigmaA", &Medium::getSigmaA, BP_RETURN_VALUE)
-        .def("getSigmaS", &Medium::getSigmaS, BP_RETURN_VALUE)
-        .def("getSigmaT", &Medium::getSigmaT, BP_RETURN_VALUE)
-        .def("isHomogeneous", &Medium::isHomogeneous);
-    
-    
 	void (ProjectiveCamera::*projectiveCamera_setWorldTransform1)(const Transform &) = &ProjectiveCamera::setWorldTransform;
 	void (ProjectiveCamera::*projectiveCamera_setWorldTransform2)(AnimatedTransform *) = &ProjectiveCamera::setWorldTransform;
 	const Transform (ProjectiveCamera::*projectiveCamera_getWorldTransform1)(Float t) const = &ProjectiveCamera::getWorldTransform;
