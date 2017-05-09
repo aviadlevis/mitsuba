@@ -32,9 +32,11 @@ fi
 
 if [[ "$(uname)" == 'Darwin' ]]; then
 	export PYTHONPATH="$MITSUBA_DIR/Mitsuba.app/python/$pyver:$PYTHONPATH"
+  export PYTHONPATH="$MITSUBA_DIR:$PYTHONPATH"
 	mitsuba_plugin_dir="$MITSUBA_DIR/Mitsuba.app/plugins"
 else
 	export PYTHONPATH="$MITSUBA_DIR/dist/python:$MITSUBA_DIR/dist/python/$pyver:$PYTHONPATH"
+  export PYTHONPATH="$MITSUBA_DIR:$PYTHONPATH"
 	mitsuba_plugin_dir="$MITSUBA_DIR/dist/plugins"
 fi
 unset pyver

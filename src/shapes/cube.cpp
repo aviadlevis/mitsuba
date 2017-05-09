@@ -19,6 +19,12 @@
 #include <mitsuba/render/trimesh.h>
 #include <mitsuba/core/properties.h>
 
+#include <mitsuba/render/bsdf.h>
+#include <mitsuba/render/emitter.h>
+#include <mitsuba/render/sensor.h>
+#include <mitsuba/render/subsurface.h>
+#include <mitsuba/render/medium.h>
+
 MTS_NAMESPACE_BEGIN
 
 static Float CubeData_vertexPositions[][3] = {{1, -1, -1}, {1, -1, 1}, {-1, -1, 1}, {-1, -1, -1}, {1, 1, -1}, {-1, 1, -1}, {-1, 1, 1}, {1, 1, 1}, {1, -1, -1}, {1, 1, -1}, {1, 1, 1}, {1, -1, 1}, {1, -1, 1}, {1, 1, 1}, {-1, 1, 1}, {-1, -1, 1}, {-1, -1, 1}, {-1, 1, 1}, {-1, 1, -1}, {-1, -1, -1}, {1, 1, -1}, {1, -1, -1}, {-1, -1, -1}, {-1, 1, -1}};
@@ -80,6 +86,9 @@ public:
 		m_normals = new Normal[m_vertexCount];
 		m_triangles = new Triangle[m_triangleCount];
 
+		m_xPeriodic = props.getBoolean("xPeriodic", false);
+		m_yPeriodic = props.getBoolean("yPeriodic", false);
+
 		Transform toWorld = props.getTransform("toWorld", Transform());
 		for (uint32_t i=0; i<m_vertexCount; ++i) {
 			Normal n;
@@ -104,9 +113,48 @@ public:
 	}
 
 	Cube(Stream *stream, InstanceManager *manager)
-		: TriMesh(stream, manager) { }
+		: TriMesh(stream, manager) { 
+		m_xPeriodic = stream->readBool();
+		m_yPeriodic = stream->readBool();
+	}
+	
+	void serialize(Stream *stream, InstanceManager *manager) const {
+		TriMesh::serialize(stream, manager);
+		stream->writeBool(m_xPeriodic);
+		stream->writeBool(m_yPeriodic);
+	}
+	
+	std::string toString() const {
+		std::ostringstream oss;
+		oss << getClass()->getName() << "[" << endl
+			<< "  name = \"" << m_name<< "\"," << endl
+			<< "  triangleCount = " << m_triangleCount << "," << endl
+			<< "  vertexCount = " << m_vertexCount << "," << endl
+			<< "  faceNormals = " << (m_faceNormals ? "true" : "false") << "," << endl
+			<< "  hasNormals = " << (m_normals ? "true" : "false") << "," << endl
+			<< "  hasTexcoords = " << (m_texcoords ? "true" : "false") << "," << endl
+			<< "  hasTangents = " << (m_tangents ? "true" : "false") << "," << endl
+			<< "  hasColors = " << (m_colors ? "true" : "false") << "," << endl
+			<< "  surfaceArea = " << m_surfaceArea << "," << endl
+			<< "  aabb = " << m_aabb.toString() << "," << endl
+			<< "  bsdf = " << indent(m_bsdf.toString()) << "," << endl;
+		if (isMediumTransition())
+			oss << "  interiorMedium = " << indent(m_interiorMedium.toString()) << "," << endl
+				<< "  exteriorMedium = " << indent(m_exteriorMedium.toString()) << "," << endl;
+		oss << "  subsurface = " << indent(m_subsurface.toString()) << "," << endl
+			<< "  emitter = " << indent(m_emitter.toString()) << "," << endl
+			<< "  xPeriodic = " << (m_xPeriodic ? "true" : "false") << endl 
+			<< "  yPeriodic = " << (m_yPeriodic ? "true" : "false") << endl 
+			<< "]";
+		return oss.str();
+	}
 
-	MTS_DECLARE_CLASS()
+	MTS_DECLARE_CLASS()	
+	
+private:
+	bool m_xPeriodic;
+	bool m_yPeriodic;
+	
 };
 
 MTS_IMPLEMENT_CLASS_S(Cube, false, TriMesh)

@@ -97,7 +97,9 @@ public:
 
 		/* Perform the first ray intersection (or ignore if the
 		   intersection has already been provided). */
+		cout << "first: "<< its.p.toString() << "\n";
 		rRec.rayIntersect(ray);
+		cout << "second: " << its.p.toString()<< "\n"; 
 		Spectrum throughput(1.0f);
 
 		if (m_maxDepth == 1)
@@ -263,7 +265,7 @@ public:
 				/* Prevent light leaks due to the use of shading normals */
 				const Vector wo = its.toWorld(bRec.wo);
 				Float woDotGeoN = dot(its.geoFrame.n, wo);
-				if (woDotGeoN * Frame::cosTheta(bRec.wo) <= 0 && m_strictNormals)
+				if (woDotGeoN * Frame::cosTheta(bRec.wo) <= 0 && m_strictNormals) 
 					break;
 
 				/* Keep track of the throughput, medium, and relative
@@ -274,7 +276,16 @@ public:
 					rRec.medium = its.getTargetMedium(wo);
 
 				/* In the next iteration, trace a ray in this direction */
-				ray = Ray(its.p, wo, ray.time);
+				ray = Ray(its.p, wo, ray.time); 
+				
+				if (std::abs(its.p.x - its.shape->getAABB().getCorner(0).x) < DeltaEpsilon) {
+					//cout <<  its.toString() << "\n"; 
+				}
+				// cout << its.shape->m_xPeriodic << "\n";
+				// AABB vvv;
+				// vvv = its.shape->getAABB();
+				
+				
 				scene->rayIntersect(ray, its);
 				scattered |= bRec.sampledType != BSDF::ENull;
 			}
