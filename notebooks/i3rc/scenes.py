@@ -88,9 +88,10 @@ for experiment in experiments:
     # Create medium bounding box
     scene.addChild(pmgr.create({
         'type' : 'cube',
+        'xPeriodic' : True,
+        'yPeriodic' : False, 
         'toWorld' : voldata['case1'].getWorldTransform(), 
-        'interior' : scene.getMedia()[0],
-        'xPeriodic' : True
+        'interior' : scene.getMedia()[0]
     }))
     
     scene.addChild(pmgr.create({

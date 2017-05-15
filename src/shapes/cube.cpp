@@ -88,7 +88,7 @@ public:
 
 		m_xPeriodic = props.getBoolean("xPeriodic", false);
 		m_yPeriodic = props.getBoolean("yPeriodic", false);
-
+		
 		Transform toWorld = props.getTransform("toWorld", Transform());
 		for (uint32_t i=0; i<m_vertexCount; ++i) {
 			Normal n;
@@ -122,6 +122,14 @@ public:
 		TriMesh::serialize(stream, manager);
 		stream->writeBool(m_xPeriodic);
 		stream->writeBool(m_yPeriodic);
+	}
+	
+	bool xPeriodic() const {
+		return m_xPeriodic;
+	}
+	
+	bool yPeriodic() const {
+		return m_yPeriodic;
 	}
 	
 	std::string toString() const {

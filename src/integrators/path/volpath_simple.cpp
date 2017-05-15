@@ -97,9 +97,8 @@ public:
 
 		/* Perform the first ray intersection (or ignore if the
 		   intersection has already been provided). */
-		cout << "first: "<< its.p.toString() << "\n";
 		rRec.rayIntersect(ray);
-		cout << "second: " << its.p.toString()<< "\n"; 
+		
 		Spectrum throughput(1.0f);
 
 		if (m_maxDepth == 1)
@@ -281,11 +280,9 @@ public:
 				if (std::abs(its.p.x - its.shape->getAABB().getCorner(0).x) < DeltaEpsilon) {
 					//cout <<  its.toString() << "\n"; 
 				}
-				// cout << its.shape->m_xPeriodic << "\n";
-				// AABB vvv;
-				// vvv = its.shape->getAABB();
+				cout << its.shape->xPeriodic() << " "<< its.shape->yPeriodic() << "\n";
 				
-				
+			
 				scene->rayIntersect(ray, its);
 				scattered |= bRec.sampledType != BSDF::ENull;
 			}

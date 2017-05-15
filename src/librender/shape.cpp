@@ -85,6 +85,14 @@ bool Shape::isCompound() const {
 	return false;
 }
 
+bool Shape::xPeriodic() const {
+	return false;
+}
+
+bool Shape::yPeriodic() const {
+	return false;
+}
+
 std::string Shape::getName() const {
 	return m_name;
 }
