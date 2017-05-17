@@ -94,6 +94,7 @@ public:
 		Spectrum Li(0.0f);
 		bool nullChain = true, scattered = false;
 		Float eta = 1.0f;
+		Point minAABB, maxAABB;
 
 		/* Perform the first ray intersection (or ignore if the
 		   intersection has already been provided). */
@@ -271,18 +272,43 @@ public:
 				   refractive index along the path */
 				throughput *= bsdfVal;
 				eta *= bRec.eta;
-				if (its.isMediumTransition())
+				
+				/* If the shape defines periodic boundary conditions change the
+				    intersection point to the opposite face and mirror the normal direction */
+				minAABB = its.shape->getAABB().min;
+				maxAABB = its.shape->getAABB().max;
+
+				if (its.shape->xPeriodic()) {
+					if (std::abs(its.p.x - minAABB.x) < DeltaEpsilon) {
+						its.p.x = maxAABB.x;
+						its.geoFrame = Frame(-its.geoFrame.n);
+					}
+					else if (std::abs(its.p.x - maxAABB.x) < DeltaEpsilon) {
+						its.p.x = minAABB.x;
+						its.geoFrame = Frame(-its.geoFrame.n);
+					}
+				}
+				if (its.shape->yPeriodic()) {
+					if (std::abs(its.p.y - minAABB.y) < DeltaEpsilon) {
+						its.p.y = maxAABB.y;
+						its.geoFrame = Frame(-its.geoFrame.n);
+					}
+					else if (std::abs(its.p.y - maxAABB.y) < DeltaEpsilon) {
+						its.p.y = minAABB.y;
+						its.geoFrame = Frame(-its.geoFrame.n);
+					}
+				} 
+
+
+				
+				if (its.isMediumTransition()){
 					rRec.medium = its.getTargetMedium(wo);
+					//if (rRec.medium == NULL) {cout << "NULL medium \n";}
+					//else {cout << "homogeneous? " << (rRec.medium->isHomogeneous()? "true":"false") << "\n"; }
+				}
 
 				/* In the next iteration, trace a ray in this direction */
 				ray = Ray(its.p, wo, ray.time); 
-				
-				if (std::abs(its.p.x - its.shape->getAABB().getCorner(0).x) < DeltaEpsilon) {
-					//cout <<  its.toString() << "\n"; 
-				}
-				cout << its.shape->xPeriodic() << " "<< its.shape->yPeriodic() << "\n";
-				
-			
 				scene->rayIntersect(ray, its);
 				scattered |= bRec.sampledType != BSDF::ENull;
 			}

@@ -13,6 +13,7 @@ class GridVolume(object):
         self.__mitsubaparams = None
         self.__scale = None
         self.__boundingBox = None
+        self.__ndim = None
             
     def setData(self, volData, boundingBox):
         """
@@ -25,6 +26,8 @@ class GridVolume(object):
         # this scale is later used as a parameters in mitsuba
         self.__scale = volData.max()   
         self.__boundingBox = boundingBox
+        self.__ndim = volData.ndim
+        
         volData = volData/self.scale
         
         fid = NamedTemporaryFile(delete=False)
@@ -38,6 +41,7 @@ class GridVolume(object):
                                         #       3. Dense uint8-based representation (The range 0..255 will be mapped to 0..1)
                                         #       4. Dense quantized directions. The directions are stored in spherical coordinates with a total storage cost of 16 bit per entry.
         
+                                        
         # Add dimensions to reach a 4D structure (fourth dimention for multi-spectral data)
         for i in range(volData.ndim, 4):
             volData = volData[...,np.newaxis]
@@ -48,6 +52,7 @@ class GridVolume(object):
         for i in range(3):
             if (shape[i] == 1): 
                 dup[i] = 2
+                
         volData = np.tile(volData, dup)
         shape = volData.shape
         ncells = shape[0]*shape[1]*shape[2]
@@ -88,6 +93,11 @@ class GridVolume(object):
         volData = volData.reshape(size, order='F')
         fid.close()
         
+        if (self.__ndim == 1):
+            volData = volData[:,0,0,0]
+        if (self.__ndim == 2):
+            volData = volData[...,0,0]
+            
         return volData, boundingBox
     
     def setMitsubaParams(self, filename):
@@ -117,6 +127,10 @@ class GridVolume(object):
     @property
     def scale(self):
         return self.__scale
+    
+    @property
+    def ndim(self):
+        return '{}D'.format(self.__ndim)
     
     @property 
     def boundingBox(self):

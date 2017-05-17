@@ -59,14 +59,13 @@ for experiment in experiments:
             },
         'sampler' : {
             'type' : 'ldsampler',
-            'sampleCount' : 10
+            'sampleCount' : 100
         }
     }))
     
     # Set the integrator
     scene.addChild(pmgr.create({
         'type' : 'volpath_simple',
-        'maxDepth' : 100
     }))
     
     # Add heterogeneous medium
@@ -89,7 +88,7 @@ for experiment in experiments:
     scene.addChild(pmgr.create({
         'type' : 'cube',
         'xPeriodic' : True,
-        'yPeriodic' : False, 
+        'yPeriodic' : True, 
         'toWorld' : voldata['case1'].getWorldTransform(), 
         'interior' : scene.getMedia()[0]
     }))
