@@ -180,6 +180,21 @@ public:
 		EWoodcockTracking
 	};
 
+	/// Possible boundary condition options
+	enum EBoundaryCondition {
+		/**
+		 * \brief Open boundary: exiting 'photons' continue on
+		 * their path (for index matched boundary)
+		 */
+		EOpen = 0,
+
+		/**
+		 * \brief Periodic boundary: exiting 'photons' re-enter
+		 * the medium through the opposite face
+		 */
+		EPeriodic
+	};
+
 	HeterogeneousMedium(const Properties &props)
 		: Medium(props) {
 		m_stepSize = props.getFloat("stepSize", 0);
@@ -199,6 +214,22 @@ public:
 			m_method = ESimpsonQuadrature;
 		else
 			Log(EError, "Unsupported integration method \"%s\"!", method.c_str());
+
+		std::string xBoundary = boost::to_lower_copy(props.getString("xBoundary", "open"));
+		if (xBoundary == "open")
+			m_xBoundary = EOpen;
+		else if (xBoundary == "periodic")
+			m_xBoundary = EPeriodic;
+		else
+			Log(EError, "Unsupported X boundary condition \"%s\"!", xBoundary.c_str());
+
+		std::string yBoundary = boost::to_lower_copy(props.getString("yBoundary", "open"));
+		if (yBoundary == "open")
+			m_yBoundary = EOpen;
+		else if (yBoundary == "periodic")
+			m_yBoundary = EPeriodic;
+		else
+			Log(EError, "Unsupported Y boundary condition \"%s\"!", yBoundary.c_str());
 	}
 
 	/* Unserialize from a binary data stream */
@@ -210,6 +241,8 @@ public:
 		m_albedo = static_cast<VolumeDataSource *>(manager->getInstance(stream));
 		m_orientation = static_cast<VolumeDataSource *>(manager->getInstance(stream));
 		m_stepSize = stream->readFloat();
+		m_xBoundary = (EBoundaryCondition) stream->readInt();
+		m_yBoundary = (EBoundaryCondition) stream->readInt();
 		configure();
 	}
 
@@ -222,6 +255,8 @@ public:
 		manager->serialize(stream, m_albedo.get());
 		manager->serialize(stream, m_orientation.get());
 		stream->writeFloat(m_stepSize);
+		stream->writeInt(m_xBoundary);
+		stream->writeInt(m_yBoundary);
 	}
 
 	void configure() {
@@ -589,10 +624,12 @@ public:
 	bool sampleDistance(const Ray &ray, MediumSamplingRecord &mRec,
 			Sampler *sampler) const {
 		Float integratedDensity, densityAtMinT, densityAtT;
+
 		bool success = false;
 
 		if (m_method == ESimpsonQuadrature) {
 			Float desiredDensity = -math::fastlog(1-sampler->next1D());
+
 			if (invertDensityIntegral(ray, desiredDensity, integratedDensity,
 					mRec.t, densityAtMinT, densityAtT)) {
 				mRec.p = ray(mRec.t);
@@ -602,6 +639,34 @@ public:
 				mRec.sigmaA = Spectrum(densityAtT) - mRec.sigmaS;
 				mRec.orientation = m_orientation != NULL
 					? m_orientation->lookupVector(mRec.p) : Vector(0.0f);
+
+			} else if (m_xBoundary == EPeriodic || m_yBoundary == EPeriodic) {
+				/* For periodic boundary conditions in X or Y
+				 * 'photons' reappear from the opposite faces of the domain*/
+				Float mint, maxt, dummyFloat;
+				Ray newRay = Ray(ray);
+				Float newDesiredDensity = desiredDensity;
+				Float totalIntegratedDensity = integratedDensity;
+
+				while (getPeriodicRay(newRay) && (desiredDensity -= integratedDensity) > 1e-6f) {
+					if (!m_densityAABB.rayIntersect(newRay, mint, maxt))
+						Log(EError, "Intersection with the medium's bounding box for "
+									"periodic boundary conditions wasn't found");
+					newRay.mint = 0; newRay.maxt = maxt;
+
+					if (invertDensityIntegral(newRay, desiredDensity, integratedDensity,
+							mRec.t, dummyFloat, densityAtT)) {
+						mRec.p = newRay(mRec.t);
+						success = true;
+						Spectrum albedo = m_albedo->lookupSpectrum(mRec.p);
+						mRec.sigmaS = albedo * densityAtT;
+						mRec.sigmaA = Spectrum(densityAtT) - mRec.sigmaS;
+						mRec.orientation = m_orientation != NULL
+							? m_orientation->lookupVector(mRec.p) : Vector(0.0f);
+					}
+					totalIntegratedDensity += integratedDensity;
+				}
+				integratedDensity = totalIntegratedDensity;
 			}
 
 			Float expVal = math::fastexp(-integratedDensity);
@@ -610,7 +675,12 @@ public:
 			mRec.pdfSuccessRev = expVal * densityAtMinT;
 			mRec.transmittance = Spectrum(expVal);
 			mRec.time = ray.time;
+
 		} else {
+			/* TODO: Add periodic boundary support for woodcock-tracking. */
+			if (m_xBoundary == EPeriodic || m_yBoundary == EPeriodic)
+				Log(EError, "Currently woodcock + periodic boundary is not supported.");
+
 			/* The following information is invalid when
 			   using Woodcock-tracking */
 			mRec.pdfFailure = 1.0f;
@@ -697,7 +767,9 @@ public:
 			<< "  albedo = " << indent(m_albedo.toString()) << "," << endl
 			<< "  orientation = " << indent(m_orientation.toString()) << "," << endl
 			<< "  stepSize = " << m_stepSize << "," << endl
-			<< "  scale = " << m_scale << endl
+			<< "  scale = " << m_scale << "," << endl
+			<< "  xBoundary = " << (m_xBoundary == EOpen ? "open" : "periodic") << "," << endl
+			<< "  yBoundary = " << (m_yBoundary == EOpen ? "open" : "periodic") << endl
 			<< "]";
 		return oss.str();
 	}
@@ -715,6 +787,34 @@ protected:
 		}
 		return density;
 	}
+
+	inline bool getPeriodicRay(Ray &ray) const {
+		/* If the ray ('photon') is exiting one of the faces with periodic boundary conditions,
+		 * the it will be periodically entering from the opposite face.
+		 * success = false for a Ray exiting a non-periodic boundary face */
+
+		Point p = ray(ray.maxt);
+		bool success = false;
+
+		if (std::abs(p.x - m_densityAABB.min.x) < 1e-6f && m_xBoundary == EPeriodic) {
+			ray.o.x = m_densityAABB.max.x;
+			success = true;
+		}
+		else if (std::abs(p.x - m_densityAABB.max.x) < 1e-6f && m_xBoundary == EPeriodic) {
+			ray.o.x = m_densityAABB.min.x;
+			success = true;
+		}
+		if (std::abs(p.y - m_densityAABB.min.y) < 1e-6f && m_yBoundary == EPeriodic) {
+			ray.o.y = m_densityAABB.max.y;
+			success = true;
+		}
+		else if (std::abs(p.y - m_densityAABB.max.y) < 1e-6f && m_yBoundary == EPeriodic) {
+			ray.o.y = m_densityAABB.min.y;
+			success = true;
+		}
+		return success;
+	}
+
 protected:
 	EIntegrationMethod m_method;
 	ref<VolumeDataSource> m_density;
@@ -726,6 +826,8 @@ protected:
 	AABB m_densityAABB;
 	Float m_maxDensity;
 	Float m_invMaxDensity;
+	EBoundaryCondition m_xBoundary;
+	EBoundaryCondition m_yBoundary;
 };
 
 MTS_IMPLEMENT_CLASS_S(HeterogeneousMedium, false, Medium)

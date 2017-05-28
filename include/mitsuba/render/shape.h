@@ -180,14 +180,7 @@ public:
 	// =============================================================
 	//! @{ \name Query functions to be implemented in subclasses
 	// =============================================================
- 
- 
-	// Return X periodic boundary condition (True/False)
-	virtual bool xPeriodic() const;
-	
-	// Return Y periodic boundary condition (True/False)
-	virtual bool yPeriodic() const;
-	
+
 	/// Return the name of this shape (e.g. the filename)
 	virtual std::string getName() const;
 

@@ -52,14 +52,16 @@ for experiment in experiments:
     
     # Create a sensor, film & sample generator
     scene.addChild(pmgr.create({
-        'type' : 'radiancemeter',
+        'type' : 'orthographic',
+        'toWorld' : Transform.translate(Vector(0.25,0.25,1)) * Transform.scale(Vector(0.25,0.25,-1)) * Transform.rotate(Vector(0,0,1), 180.0),
         'film' : {
             'type' : 'mfilm',
-            'fileFormat' : 'numpy'
-            },
+            'fileFormat' : 'numpy',
+            'width' : 32
+         },
         'sampler' : {
             'type' : 'ldsampler',
-            'sampleCount' : 100
+            'sampleCount' : 100000
         }
     }))
     
@@ -72,6 +74,8 @@ for experiment in experiments:
     scene.addChild(pmgr.create({
         'type' : 'heterogeneous',
         'method' : 'simpson',
+        'xBoundary' : 'periodic',
+        'yBoundary' : 'periodic',
         'density' : voldata['case1'].getMitsubaParams(),
         'albedo' : {
             'type' : 'constvolume',
@@ -87,8 +91,6 @@ for experiment in experiments:
     # Create medium bounding box
     scene.addChild(pmgr.create({
         'type' : 'cube',
-        'xPeriodic' : True,
-        'yPeriodic' : True, 
         'toWorld' : voldata['case1'].getWorldTransform(), 
         'interior' : scene.getMedia()[0]
     }))
