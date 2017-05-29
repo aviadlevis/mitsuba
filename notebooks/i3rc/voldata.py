@@ -12,7 +12,8 @@ import numpy as np
 from mtspywrapper import GridVolume
 
 voldata = {
-    'case1' : GridVolume()
+    'case1' : GridVolume(),
+    'case2' : GridVolume()
 }
 
 def initCase1(voldata):
@@ -20,7 +21,6 @@ def initCase1(voldata):
     boundingBox = [0, 0, 0, 0.5, 0.5, 0.25]  # [xmin, ymin, zmin, xmax, ymax, zmax] in km units
     geometricalThickness = boundingBox[5] - boundingBox[2]
     betaField = tauField/geometricalThickness
-    # betaField = np.tile(betaField, 200)  # Duplicate beta along x for periodic boundary condition
     voldata['case1'].setData(betaField, boundingBox)
 
 def initCase2(voldata):

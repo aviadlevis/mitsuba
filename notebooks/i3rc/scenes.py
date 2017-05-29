@@ -33,27 +33,34 @@ import numpy as np
 from voldata import *
 
 scenes = dict()
+ 
 for experiment in experiments:
     expNum = int(experiment[3])
-
+    
     # Set single-scattering albedo according to the experiment number
     albedo = Spectrum(1.0)
     if (expNum == 3) or (expNum == 4):
         albedo = Spectrum(0.99)
-
+        
     # Set solar zenith angle according to the experiment number
-    solarZenith = 0.0
+    solarAzimuth = 0.0 
+    solarZenith  = 180.0
     if (expNum == 2) or (expNum == 4):
-        solarZenith = np.deg2rad(60.0)
-    solarDirection = Vector(0.0, 0.0, -np.cos(solarZenith))
+        solarZenith = 120.0
+    solarZenith, solarAzimuth = np.deg2rad(solarZenith), np.deg2rad(solarAzimuth)
+    solarDirection = Vector(
+        np.sin(solarZenith) * np.cos(solarAzimuth), 
+        np.sin(solarZenith) * np.sin(solarAzimuth), 
+        np.cos(solarZenith)
+    )
 
     scene = Scene()
     pmgr = PluginManager.getInstance()
-    
+
     # Create a sensor, film & sample generator
     scene.addChild(pmgr.create({
         'type' : 'orthographic',
-        'toWorld' : Transform.translate(Vector(0.25,0.25,1)) * Transform.scale(Vector(0.25,0.25,-1)) * Transform.rotate(Vector(0,0,1), 180.0),
+        'toWorld' : Transform.translate(Vector(0.25,0.25,1)) * Transform.scale(Vector(0.25,0.01,-1)) * Transform.rotate(Vector(0,0,1), 180.0),
         'film' : {
             'type' : 'mfilm',
             'fileFormat' : 'numpy',
@@ -65,10 +72,13 @@ for experiment in experiments:
         }
     }))
     
+
     # Set the integrator
     scene.addChild(pmgr.create({
-        'type' : 'volpath_simple',
+        'type' : 'volpath_simple'
+         
     }))
+    
     
     # Add heterogeneous medium
     scene.addChild(pmgr.create({
@@ -88,6 +98,7 @@ for experiment in experiments:
         'scale' : voldata['case1'].scale
     }))
     
+
     # Create medium bounding box
     scene.addChild(pmgr.create({
         'type' : 'cube',
@@ -100,6 +111,6 @@ for experiment in experiments:
         'id' : 'Solar',
         'direction' : solarDirection
     }))
-    scene.configure()
 
+    scene.configure()
     scenes[experiment] = scene

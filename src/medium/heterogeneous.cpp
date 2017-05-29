@@ -642,7 +642,7 @@ public:
 
 			} else if (m_xBoundary == EPeriodic || m_yBoundary == EPeriodic) {
 				/* For periodic boundary conditions in X or Y
-				 * 'photons' reappear from the opposite faces of the domain*/
+				   'photons' reappear from the opposite faces of the domain */
 				Float mint, maxt, dummyFloat;
 				Ray newRay = Ray(ray);
 				Float newDesiredDensity = desiredDensity;
