@@ -551,7 +551,7 @@ public:
 							+ 2*(node1 - 2*node2 + node3)*x*x);
 						return true;
 					} else if (++it > 30) {
-						Log(EWarn, "invertDensityIntegral(): stuck in Newton-Bisection -- "
+						Log(EError, "invertDensityIntegral(): stuck in Newton-Bisection -- "
 							"round-off error issues? The step size was %e, fx=%f, dfx=%f, "
 							"a=%f, b=%f", stepSize, fx, dfx, a, b);
 						return false;
@@ -645,16 +645,21 @@ public:
 				   'photons' reappear from the opposite faces of the domain */
 				Float mint, maxt, dummyFloat;
 				Ray newRay = Ray(ray);
-				Float newDesiredDensity = desiredDensity;
 				Float totalIntegratedDensity = integratedDensity;
+				Float newDesiredDensity = desiredDensity - integratedDensity;
+				int k=0;
 
-				while (getPeriodicRay(newRay) && (desiredDensity -= integratedDensity) > 1e-6f) {
+				// cout << "Before Loop: " << " desiredDensity: " << desiredDensity << " integratedDensity: " << integratedDensity << " newDesiredDensity: " << newDesiredDensity << " newRay.o " << newRay.o.toString()<< " newRay(t) " << newRay(newRay.maxt).toString() << endl;
+				while (getPeriodicRay(newRay) && (newDesiredDensity > 1e-6f)) {
+
 					if (!m_densityAABB.rayIntersect(newRay, mint, maxt))
 						Log(EError, "Intersection with the medium's bounding box for "
 									"periodic boundary conditions wasn't found");
+
 					newRay.mint = 0; newRay.maxt = maxt;
 
-					if (invertDensityIntegral(newRay, desiredDensity, integratedDensity,
+
+					if (invertDensityIntegral(newRay, newDesiredDensity, integratedDensity,
 							mRec.t, dummyFloat, densityAtT)) {
 						mRec.p = newRay(mRec.t);
 						success = true;
@@ -664,7 +669,17 @@ public:
 						mRec.orientation = m_orientation != NULL
 							? m_orientation->lookupVector(mRec.p) : Vector(0.0f);
 					}
+
 					totalIntegratedDensity += integratedDensity;
+					newDesiredDensity -= integratedDensity;
+
+					if (++k > 5 || (maxt < 1e-6f)) {
+						cout << "k=" << k << " newDesiredDensity: " << newDesiredDensity << " integratedDensity: " << integratedDensity << " totalIntegratedDensity: " << totalIntegratedDensity << " newRay.o: " << newRay.o.toString() << " newRay(t): " << newRay(newRay.maxt).toString() << endl;
+						cout << "maxt: " << newRay.maxt << " mint: " << newRay.mint << " d: " << newRay.d.toString() << endl;
+						cout << "Ray.o: " << ray.o.toString() << " Ray(t): " << ray(newRay.maxt).toString() << endl;
+						cout << "maxt: " << ray.maxt << " mint: " << ray.mint << " d: " << ray.d.toString() << endl;
+						Log(EError, "ASDAHSD");
+					}
 				}
 				integratedDensity = totalIntegratedDensity;
 			}
@@ -789,34 +804,40 @@ protected:
 	}
 
 	inline bool getPeriodicRay(Ray &ray) const {
-		/* If the ray ('photon') is exiting one of the faces with periodic boundary conditions,
+		/* If the ray ("photon") is exiting one of the faces with periodic boundary conditions,
 		 * the it will be periodically entering from the opposite face.
 		 * success = false for a Ray exiting a non-periodic boundary face */
+		EBoundaryCondition boundaryArray[2] = {m_xBoundary, m_yBoundary};
+		ray.o = ray(ray.maxt);
 
-		Point p = ray(ray.maxt);
-		bool success = false;
+		/* If the photon is exiting the top or bottom no need to check other faces.
+		  This is due to an infinite loop for cause by photons exiting top or bottom *edges*. */
+		if (std::abs(ray.o.z - m_densityAABB.min.z) < 1e-6f || std::abs(ray.o.z - m_densityAABB.max.z) < 1e-6f)
+			return false;
 
-		if (std::abs(p.x - m_densityAABB.min.x) < 1e-6f && m_xBoundary == EPeriodic) {
-			ray.o.x = m_densityAABB.max.x;
-			success = true;
+		/* For each pair of AABB planes */
+		for (int i=0; i<2; i++) {
+			Float origin = ray.o[i];
+			Float minVal = m_densityAABB.min[i], maxVal = m_densityAABB.max[i];
+			EBoundaryCondition boundaryCondition = boundaryArray[i];
+
+			/* Calculate distances */
+			Float d1 = std::abs(minVal - origin);
+			Float d2 = std::abs(maxVal - origin);
+
+			if (d1 < 1e-6f && boundaryCondition == EPeriodic)
+				ray.o[i] = minVal;
+			else if (d2 < 1e-6f && boundaryCondition == EPeriodic)
+				ray.o[i] = maxVal;
+
 		}
-		else if (std::abs(p.x - m_densityAABB.max.x) < 1e-6f && m_xBoundary == EPeriodic) {
-			ray.o.x = m_densityAABB.min.x;
-			success = true;
-		}
-		if (std::abs(p.y - m_densityAABB.min.y) < 1e-6f && m_yBoundary == EPeriodic) {
-			ray.o.y = m_densityAABB.max.y;
-			success = true;
-		}
-		else if (std::abs(p.y - m_densityAABB.max.y) < 1e-6f && m_yBoundary == EPeriodic) {
-			ray.o.y = m_densityAABB.min.y;
-			success = true;
-		}
-		return success;
+		return true;
 	}
 
 protected:
 	EIntegrationMethod m_method;
+	EBoundaryCondition m_xBoundary;
+	EBoundaryCondition m_yBoundary;
 	ref<VolumeDataSource> m_density;
 	ref<VolumeDataSource> m_albedo;
 	ref<VolumeDataSource> m_orientation;
@@ -826,8 +847,7 @@ protected:
 	AABB m_densityAABB;
 	Float m_maxDensity;
 	Float m_invMaxDensity;
-	EBoundaryCondition m_xBoundary;
-	EBoundaryCondition m_yBoundary;
+
 };
 
 MTS_IMPLEMENT_CLASS_S(HeterogeneousMedium, false, Medium)

@@ -333,7 +333,8 @@ template <typename T> struct TAABB {
 					return false;
 			}
 		}
-
+		if (farT<1e-5f)
+			cout << "nearT: " << nearT <<  " farT: " << farT << " ray.o: " << ray.o.toString() << " ray.d " << ray.d.toString() << endl;
 		return true;
 	}
 

@@ -68,15 +68,15 @@ for experiment in experiments:
          },
         'sampler' : {
             'type' : 'ldsampler',
-            'sampleCount' : 1000
+            'sampleCount' : 100000
         }
     }))
     
 
     # Set the integrator
     scene.addChild(pmgr.create({
-        'type' : 'volpath_simple'
-         
+        'type' : 'volpath_simple',
+        'rrDepth' : 30
     }))
     
     
