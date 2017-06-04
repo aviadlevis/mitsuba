@@ -68,7 +68,7 @@ for experiment in experiments:
          },
         'sampler' : {
             'type' : 'ldsampler',
-            'sampleCount' : 100000
+            'sampleCount' : 1000
         }
     }))
     

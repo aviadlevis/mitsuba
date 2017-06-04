@@ -24,7 +24,8 @@ def initCase1(voldata):
     voldata['case1'].setData(betaField, boundingBox)
 
 def initCase2(voldata):
-    pass
+    betaField = np.loadtxt(fname='i3rc/case2/mmcr_tau_32km_020898') 
+    boundingBox = [0, 0, 0, 0.64, 0.5, 0.25]  # [xmin, ymin, zmin, xmax, ymax, zmax] in km units
 
 def initCase3(voldata):
     pass
