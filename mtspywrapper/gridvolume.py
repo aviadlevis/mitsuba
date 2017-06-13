@@ -14,6 +14,7 @@ class GridVolume(object):
         self.__scale = None
         self.__boundingBox = None
         self.__ndim = None
+        self.__shape = None
             
     def setData(self, volData, boundingBox):
         """
@@ -27,6 +28,7 @@ class GridVolume(object):
         self.__scale = volData.max()   
         self.__boundingBox = boundingBox
         self.__ndim = volData.ndim
+        self.__shape = volData.shape
         
         volData = volData/self.scale
         
@@ -131,6 +133,10 @@ class GridVolume(object):
     @property
     def ndim(self):
         return '{}D'.format(self.__ndim)
+    
+    @property
+    def shape(self):
+        return self.__shape
     
     @property 
     def boundingBox(self):

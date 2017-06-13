@@ -326,5 +326,5 @@ private:
 };
 
 MTS_IMPLEMENT_CLASS_S(OrthographicCamera, false, ProjectiveCamera)
-MTS_EXPORT_PLUGIN(OrthographicCamera, "Orthographics camera");
+MTS_EXPORT_PLUGIN(OrthographicCamera, "Orthographic camera");
 MTS_NAMESPACE_END

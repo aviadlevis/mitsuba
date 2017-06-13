@@ -119,7 +119,7 @@ public:
 				   \int_x^y tau(x, x') [ \sigma_s \int_{S^2} \rho(\omega,\omega') L(x,\omega') d\omega' ] dx'
 				*/
 				const PhaseFunction *phase = rRec.medium->getPhaseFunction();
-
+				// cout << "ray.o: " << ray.o.toString() << " ray.d: " << ray.d.toString() << " throughput: " << throughput.toString() << "  mRec.sigmaS: " <<  mRec.sigmaS.toString() << " mRec.pdfSuccess: " << mRec.pdfSuccess <<" mRec.transmittance: " << mRec.transmittance.toString() << endl;
 				throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
 
 				/* ==================================================================== */

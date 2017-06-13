@@ -188,6 +188,7 @@ public:
 	/// Return a string representation
 	virtual std::string toString() const = 0;
 
+	virtual bool getPeriodicRay(Ray &ray, Float t) const = 0;
 	//! @}
 	// =============================================================
 
@@ -201,12 +202,14 @@ protected:
 
 	/// Virtual destructor
 	virtual ~Medium() { }
+
 protected:
 	ref<PhaseFunction> m_phaseFunction;
 	Spectrum m_sigmaA;
 	Spectrum m_sigmaS;
 	Spectrum m_sigmaT;
 };
+
 
 MTS_NAMESPACE_END
 

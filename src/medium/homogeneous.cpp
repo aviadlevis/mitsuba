@@ -399,6 +399,10 @@ public:
 		return true;
 	}
 
+	bool getPeriodicRay(Ray &ray, Float t) const {
+		return false;
+	}
+
 	std::string toString() const {
 		std::ostringstream oss;
 		oss << "HomogeneousMedium[" << endl

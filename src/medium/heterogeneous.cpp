@@ -642,22 +642,24 @@ public:
 
 			} else if (m_xBoundary == EPeriodic || m_yBoundary == EPeriodic) {
 				/* For periodic boundary conditions in X or Y
-				   'photons' reappear from the opposite faces of the domain */
-				Float mint, maxt, dummyFloat;
+				   'photons' reappear from the opposite faces of the domain:
+				   loop until the photon exits through the top or bottom */
+
+				Float mint = ray.mint;
+				Float maxt = ray.maxt;
+				Float dummyFloat;
 				Ray newRay = Ray(ray);
 				Float totalIntegratedDensity = integratedDensity;
 				Float newDesiredDensity = desiredDensity - integratedDensity;
-				int k=0;
 
-				// cout << "Before Loop: " << " desiredDensity: " << desiredDensity << " integratedDensity: " << integratedDensity << " newDesiredDensity: " << newDesiredDensity << " newRay.o " << newRay.o.toString()<< " newRay(t) " << newRay(newRay.maxt).toString() << endl;
-				while (getPeriodicRay(newRay) && (newDesiredDensity > 1e-6f)) {
+				while (getPeriodicRay(newRay, maxt) && (newDesiredDensity > 1e-6f)) {
 
 					if (!m_densityAABB.rayIntersect(newRay, mint, maxt))
 						Log(EError, "Intersection with the medium's bounding box for "
 									"periodic boundary conditions wasn't found");
 
-					newRay.mint = 0; newRay.maxt = maxt;
-
+					newRay.mint = 0;
+					newRay.maxt = maxt;
 
 					if (invertDensityIntegral(newRay, newDesiredDensity, integratedDensity,
 							mRec.t, dummyFloat, densityAtT)) {
@@ -672,14 +674,6 @@ public:
 
 					totalIntegratedDensity += integratedDensity;
 					newDesiredDensity -= integratedDensity;
-
-					if (++k > 5 || (maxt < 1e-6f)) {
-						cout << "k=" << k << " newDesiredDensity: " << newDesiredDensity << " integratedDensity: " << integratedDensity << " totalIntegratedDensity: " << totalIntegratedDensity << " newRay.o: " << newRay.o.toString() << " newRay(t): " << newRay(newRay.maxt).toString() << endl;
-						cout << "maxt: " << newRay.maxt << " mint: " << newRay.mint << " d: " << newRay.d.toString() << endl;
-						cout << "Ray.o: " << ray.o.toString() << " Ray(t): " << ray(newRay.maxt).toString() << endl;
-						cout << "maxt: " << ray.maxt << " mint: " << ray.mint << " d: " << ray.d.toString() << endl;
-						Log(EError, "ASDAHSD");
-					}
 				}
 				integratedDensity = totalIntegratedDensity;
 			}
@@ -803,33 +797,39 @@ protected:
 		return density;
 	}
 
-	inline bool getPeriodicRay(Ray &ray) const {
+	/* TODO: Move to Medium for homogeneous periodic */
+	bool getPeriodicRay(Ray &ray, Float t) const {
 		/* If the ray ("photon") is exiting one of the faces with periodic boundary conditions,
-		 * the it will be periodically entering from the opposite face.
-		 * success = false for a Ray exiting a non-periodic boundary face */
-		EBoundaryCondition boundaryArray[2] = {m_xBoundary, m_yBoundary};
-		ray.o = ray(ray.maxt);
+		 * it will be periodically enter from the opposite face and return True.
+		 * return False for a Ray exiting a non-periodic boundary face */
 
-		/* If the photon is exiting the top or bottom no need to check other faces.
-		  This is due to an infinite loop for cause by photons exiting top or bottom *edges*. */
-		if (std::abs(ray.o.z - m_densityAABB.min.z) < 1e-6f || std::abs(ray.o.z - m_densityAABB.max.z) < 1e-6f)
-			return false;
+		EBoundaryCondition boundaryArray[3] = {m_xBoundary, m_yBoundary, EOpen};
 
-		/* For each pair of AABB planes */
-		for (int i=0; i<2; i++) {
-			Float origin = ray.o[i];
+		/* If ray(t) is not finite it is because the ray hit the corner/edge of the domain.
+		 * In this case we keep the same origin and check periodicity */
+		if (std::isfinite(ray(t).x) && std::isfinite(ray(t).y) && std::isfinite(ray(t).z))
+			ray.o = ray(t);
+
+		/* For each pair of AABB planes check exiting direction. Check top/bottom first
+		 * because then there is no need to check periodicity of XY faces */
+		for (int i = 3; i --> 0; ) {
+			Float origin = ray.o[i], direction = ray.d[i];
 			Float minVal = m_densityAABB.min[i], maxVal = m_densityAABB.max[i];
-			EBoundaryCondition boundaryCondition = boundaryArray[i];
 
 			/* Calculate distances */
-			Float d1 = std::abs(minVal - origin);
-			Float d2 = std::abs(maxVal - origin);
+			Float minDist = std::abs(minVal - origin);
+			Float maxDist = std::abs(maxVal - origin);
 
-			if (d1 < 1e-6f && boundaryCondition == EPeriodic)
-				ray.o[i] = minVal;
-			else if (d2 < 1e-6f && boundaryCondition == EPeriodic)
-				ray.o[i] = maxVal;
-
+			if (minDist < 1e-6f && direction < 0.0)
+				if (boundaryArray[i] == EPeriodic)
+					ray.o[i] = maxVal;
+				else
+					return false;
+			else if (maxDist < 1e-6f && direction > 0.0)
+				if (boundaryArray[i] == EPeriodic)
+					ray.o[i] = minVal;
+				else
+					return false;
 		}
 		return true;
 	}
