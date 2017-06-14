@@ -45,8 +45,8 @@ class Case(object):
         self.experiment = None
         self.resultFolder = None
         self.volumetricData = GridVolume() 
-        self.xBoundary = None
-        self.xBoundary = None
+        self.xBoundary = 'periodic'
+        self.yBoundary = 'periodic'
     
     
     def getResults(self):
@@ -220,8 +220,6 @@ class Case1(Case):
     def __init__(self):
         super(Case1, self).__init__()
         self.resultFolder = os.path.join(BASEPATH, 'case1','consensus_results')
-        self.xBoundary = 'periodic'
-        self.yBoundary = 'periodic'
         
         # Create the volumetric data for the step cloud case
         tauField = np.hstack((np.full(16, 2.00), np.full(16, 18.00)))
@@ -273,13 +271,11 @@ class Case2(Case):
     def __init__(self):
         super(Case2, self).__init__()
         self.resultFolder = os.path.join(BASEPATH, 'case2','consensus_results')
-        self.xBoundary = 'periodic'
-        self.yBoundary = 'periodic'
         
         # Load the volumetric data 
         fileName = 'mmcr_tau_32km_020898'
         betaField = np.loadtxt(os.path.join(BASEPATH, 'case2', fileName)).T.reshape((640,1,54))
-        boundingBox = [0, 0, 0, 32, 0.5, 2.43]   # [xmin, ymin, zmin, xmax, ymax, zmax] in km units
+        boundingBox = [0, 0, 0, 32, 0.5, 54]   # [xmin, ymin, zmin, xmax, ymax, zmax] in km units
         self.volumetricData.setData(betaField, boundingBox)
         
         
@@ -317,4 +313,68 @@ class Case2(Case):
             raise "Error: {} is not a valid experiment for Case1.".format(exp)
         
         
+#----------------------------------------------------------------------------------------------------#
+#                                   Case3: Landsat cloud case                                        #
+#----------------------------------------------------------------------------------------------------#
+
+class Case3(Case):
+    """ 
+    Case3: Landsat cloud case 
+        - Project page: https://i3rc.gsfc.nasa.gov/input/Landsat/index.html
+        - Readme: https://i3rc.gsfc.nasa.gov/input/Landsat/README.txt
+    """
+    
+    def __init__(self):
+        super(Case3, self).__init__()
+        self.resultFolder = os.path.join(BASEPATH, 'case3','consensus_results')
         
+        # Load the volumetric data 
+        geometricalThickness = np.loadtxt(os.path.join(BASEPATH, 'case3', 'scene43.dz.128x128'))
+        tauField = np.loadtxt(os.path.join(BASEPATH, 'case3', 'scene43.tau.128x128'))
+        
+        nx, ny, nz = 128, 128, 128
+        dz = geometricalThickness.max()/nz
+        nCellsOccupied = np.round(geometricalThickness/dz).astype(np.int)
+        roundedGeometricalThickness = nCellsOccupied*dz
+        betaField2D = np.divide(tauField,
+                                roundedGeometricalThickness, 
+                                out=np.zeros_like(tauField), 
+                                where=roundedGeometricalThickness!=0)
+        betaField3D = np.zeros(shape=(nx, ny, nz), dtype=np.float32)
+        for x in range(nx):
+            for y in range(ny):
+                betaField3D[x,y,:nCellsOccupied[x,y]] = betaField2D[x,y]
+
+        boundingBox = [0, 0, 0, 3.84, 3.84, geometricalThickness.max()]   # [xmin, ymin, zmin, xmax, ymax, zmax] in km units
+        self.volumetricData.setData(betaField, boundingBox)
+        
+        
+    def setExperiment(self, experiment):
+        """
+        SZA - Solar Zenith Angle
+        w0 - Single Scattering Albedo
+  
+        Experiments are as follows:
+        Exp.#    
+            1.    SZA = 0,  w0 = 1
+            2.    SZA = 60, w0 = 1
+            3.    SZA = 0,  w0 = 0.99
+            4.    SZA = 60, w0 = 0.99
+        """
+        super(Case2, self).setExperiment(experiment)
+       
+        self.solarAzimuthAngle = 0.0
+        exp = self.experiment[:4]
+        if (exp == 'exp1'):
+            self.solarZenithAngle, self.singleScatteringAlbedo = 0.0, Spectrum(1.0)
+        elif (exp == 'exp2'):
+            self.solarZenithAngle, self.singleScatteringAlbedo = 60.0, Spectrum(1.0)
+        elif (exp == 'exp3'):
+            self.solarZenithAngle, self.singleScatteringAlbedo = 0.0, Spectrum(0.99)
+        elif (exp == 'exp4'):
+            self.solarZenithAngle, self.singleScatteringAlbedo = 60.0, Spectrum(0.99)
+        else:
+            raise "Error: {} is not a valid experiment for Case1.".format(exp)
+        
+        
+         

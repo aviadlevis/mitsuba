@@ -99,7 +99,8 @@ class GridVolume(object):
             volData = volData[:,0,0,0]
         if (self.__ndim == 2):
             volData = volData[...,0,0]
-            
+        
+        volData *= self.scale
         return volData, boundingBox
     
     def setMitsubaParams(self, filename):
