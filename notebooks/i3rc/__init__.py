@@ -340,13 +340,12 @@ class Case3(Case):
                                 roundedGeometricalThickness, 
                                 out=np.zeros_like(tauField), 
                                 where=roundedGeometricalThickness!=0)
-        betaField3D = np.zeros(shape=(nx, ny, nz), dtype=np.float32)
+        betaField3D = np.zeros(shape=(nx, ny, nz))
         for x in range(nx):
             for y in range(ny):
                 betaField3D[x,y,:nCellsOccupied[x,y]] = betaField2D[x,y]
-
         boundingBox = [0, 0, 0, 3.84, 3.84, geometricalThickness.max()]   # [xmin, ymin, zmin, xmax, ymax, zmax] in km units
-        self.volumetricData.setData(betaField, boundingBox)
+        self.volumetricData.setData(betaField3D, boundingBox)
         
         
     def setExperiment(self, experiment):
@@ -361,7 +360,7 @@ class Case3(Case):
             3.    SZA = 0,  w0 = 0.99
             4.    SZA = 60, w0 = 0.99
         """
-        super(Case2, self).setExperiment(experiment)
+        super(Case3, self).setExperiment(experiment)
        
         self.solarAzimuthAngle = 0.0
         exp = self.experiment[:4]

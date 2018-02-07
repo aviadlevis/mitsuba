@@ -48,7 +48,7 @@ class GridVolume(object):
         for i in range(volData.ndim, 4):
             volData = volData[...,np.newaxis]
             
-        # Duplicate dimensions with 1 cell (currently mitsuba accepts only <2 grid points per dimension)
+        # Duplicate dimensions with 1 cell (currently mitsuba accepts only >2 grid points per dimension)
         shape = volData.shape
         dup = [1,1,1,1]
         for i in range(3):
