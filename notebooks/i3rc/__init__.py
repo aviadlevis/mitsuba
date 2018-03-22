@@ -121,7 +121,7 @@ class Case(object):
         # Set the integrator
         scene.addChild(pmgr.create({
             'type' : 'volpath_simple',
-            'rrDepth' : 30
+            'rrDepth' : 10
         }))
         # Add heterogeneous medium
         scene.addChild(pmgr.create({
@@ -274,8 +274,9 @@ class Case2(Case):
         
         # Load the volumetric data 
         fileName = 'mmcr_tau_32km_020898'
-        betaField = np.loadtxt(os.path.join(BASEPATH, 'case2', fileName)).T.reshape((640,1,54))
-        boundingBox = [0, 0, 0, 32, 0.5, 54]   # [xmin, ymin, zmin, xmax, ymax, zmax] in km units
+        betaField = np.loadtxt(os.path.join(BASEPATH, 'case2', fileName)).T.reshape((640,1,54))[...,::-1]
+        betaField /= 0.045   # It is given in inverse grid unit --> devide by 45m vertical resolution to get km^-1
+        boundingBox = [0, 0, 0, 32.0, 1, 2.43]   # [xmin, ymin, zmin, xmax, ymax, zmax] in km units
         self.volumetricData.setData(betaField, boundingBox)
         
         
@@ -310,7 +311,7 @@ class Case2(Case):
         elif (exp == 'exp4'):
             self.solarZenithAngle, self.singleScatteringAlbedo = 60.0, Spectrum(0.99)
         else:
-            raise "Error: {} is not a valid experiment for Case1.".format(exp)
+            raise "Error: {} is not a valid experiment for Case2.".format(exp)
         
         
 #----------------------------------------------------------------------------------------------------#

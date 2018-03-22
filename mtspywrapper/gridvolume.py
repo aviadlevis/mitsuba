@@ -27,7 +27,7 @@ class GridVolume(object):
         # this scale is later used as a parameters in mitsuba
         self.__scale = volData.max()   
         self.__boundingBox = boundingBox
-        self.__ndim = volData.ndim
+        self.__ndim = 3
         self.__shape = volData.shape
         
         volData = volData/self.scale
@@ -52,7 +52,9 @@ class GridVolume(object):
         shape = volData.shape
         dup = [1,1,1,1]
         for i in range(3):
+            # Singelton on that dimension - requieres duplication 
             if (shape[i] == 1): 
+                self.__ndim -= 1   
                 dup[i] = 2
                 
         volData = np.tile(volData, dup)
@@ -63,7 +65,7 @@ class GridVolume(object):
         fid.write(struct.pack(6*'f',*boundingBox))  # Bytes 25-48 Axis-aligned bounding box of the data stored in single precision order: (xmin, ymin, zmin, xmax, ymax, zmax)
     
         # Write the data: Bytes 49-*
-        # Binary data of the volume stored in the specified encoding. The data are ordered so that the following C-style indexing operationmakes sense
+        # Binary data of the volume stored in the specified encoding. The data are ordered so that the following C-style indexing operation makes sense
         # after the file has been mapped into memory: data[((zpos*yres + ypos)*xres + xpos)*channels + chan]
         # where (xpos, ypos, zpos, chan) denotes the lookup location.
         fid.write(struct.pack('f'*ncells, *volData.ravel(order='F')));        
@@ -94,12 +96,12 @@ class GridVolume(object):
         volData = np.array(struct.unpack(nCells*'f', bytearray(bindata)))
         volData = volData.reshape(size, order='F')
         fid.close()
-        
-        if (self.__ndim == 1):
-            volData = volData[:,0,0,0]
-        if (self.__ndim == 2):
-            volData = volData[...,0,0]
-        
+
+        for ax in range(3):
+            u_volData, counts =  np.unique(volData, axis=ax, return_counts=True)
+            if np.all(counts==2):
+                volData = u_volData
+            
         volData *= self.scale
         return volData, boundingBox
     
