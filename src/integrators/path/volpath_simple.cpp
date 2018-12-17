@@ -114,14 +114,20 @@ public:
 			/* ==================================================================== */
 			/*                 Radiative Transfer Equation sampling                 */
 			/* ==================================================================== */
+			
+			
+			// cout << "ray.o: " << ray.o.toString() << " ray.d: " << ray.d.toString() << " throughput: " << throughput.toString() << "  mRec.sigmaS: " <<  mRec.sigmaS.toString() << endl;
+			// cout << " mRec.pdfSuccess: " << mRec.pdfSuccess <<" mRec.transmittance: " << mRec.transmittance.toString() << endl;
+			// if ( throughput.average() > 40 )
+			// std::exit(0);
+			
 			if (rRec.medium && rRec.medium->sampleDistance(Ray(ray, 0, its.t), mRec, rRec.sampler)) {
 				/* Sample the integral
 				   \int_x^y tau(x, x') [ \sigma_s \int_{S^2} \rho(\omega,\omega') L(x,\omega') d\omega' ] dx'
 				*/
 				const PhaseFunction *phase = rRec.medium->getPhaseFunction();
-				// cout << "ray.o: " << ray.o.toString() << " ray.d: " << ray.d.toString() << " throughput: " << throughput.toString() << "  mRec.sigmaS: " <<  mRec.sigmaS.toString() << " mRec.pdfSuccess: " << mRec.pdfSuccess <<" mRec.transmittance: " << mRec.transmittance.toString() << endl;
 				throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
-
+	
 				/* ==================================================================== */
 				/*                     Direct illumination sampling                     */
 				/* ==================================================================== */
@@ -154,6 +160,7 @@ public:
 				if (phaseVal == 0)
 					break;
 				throughput *= phaseVal;
+			
 
 				/* Trace a ray in this direction */
 				ray = Ray(mRec.p, pRec.wo, ray.time);
@@ -288,10 +295,12 @@ public:
 				   index boundaries. Stop with at least some probability to avoid
 				   getting stuck (e.g. due to total internal reflection) */
 
-				Float q = std::min(throughput.max() * eta * eta, (Float) 0.95f);
+				Float q = std::min(throughput.max() * eta * eta, (Float) 0.99f);
+				// cout << "q: " << q << " eta:" << eta << " throughput: " << throughput.toString() << endl;
 				if (rRec.nextSample1D() >= q)
 					break;
 				throughput /= q;
+				
 			}
 		}
 		avgPathLength.incrementBase();

@@ -1,5 +1,7 @@
 """
-A python wrapper for mitsbua     
+A python wrapper for mitsbua. 
 """
 
-from gridvolume import GridVolume
+from medium import *
+from solar import *
+from sensor import *
