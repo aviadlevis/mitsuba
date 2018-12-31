@@ -774,6 +774,7 @@ public:
 		oss << "HeterogeneousMedium[" << endl
 			<< "  density = " << indent(m_density.toString()) << "," << endl
 			<< "  albedo = " << indent(m_albedo.toString()) << "," << endl
+			<< "  phase = " << indent(m_phaseFunction.toString()) << "," << endl
 			<< "  orientation = " << indent(m_orientation.toString()) << "," << endl
 			<< "  stepSize = " << m_stepSize << "," << endl
 			<< "  scale = " << m_scale << "," << endl
@@ -825,11 +826,12 @@ protected:
 					ray.o[i] = maxVal;
 				else
 					return false;
-			else if (maxDist < 1e-6f && direction > 0.0)
-				if (boundaryArray[i] == EPeriodic)
+			else if (maxDist < 1e-6f && direction > 0.0) {
+				if (boundaryArray[i] == EPeriodic) 
 					ray.o[i] = minVal;
 				else
 					return false;
+			}
 		}
 		return true;
 	}

@@ -16,7 +16,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <mitsuba/render/medium.h>
 #include <mitsuba/render/phase.h>
+#include <mitsuba/render/volume.h>
 #include <mitsuba/render/sampler.h>
 #include <mitsuba/core/properties.h>
 #include <mitsuba/core/frame.h>
@@ -43,18 +45,15 @@ MTS_NAMESPACE_BEGIN
  */
 class HGPhaseFunction : public PhaseFunction {
 public:
+
 	HGPhaseFunction(const Properties &props)
 		: PhaseFunction(props) {
-		/* Asymmetry parameter: must lie in [-1, 1] where >0 is
-		   forward scattering and <0 is backward scattering. */
-		m_g = props.getFloat("g", 0.8f);
-		if (m_g >= 1 || m_g <= -1)
-			Log(EError, "The asymmetry parameter must lie in the interval (-1, 1)!");
 	}
-
+	
+	/* Unserialize from a binary data stream */
 	HGPhaseFunction(Stream *stream, InstanceManager *manager)
 		: PhaseFunction(stream, manager) {
-		m_g = stream->readFloat();
+		m_g = static_cast<VolumeDataSource *>(manager->getInstance(stream));
 		configure();
 	}
 
@@ -62,25 +61,35 @@ public:
 
 	void serialize(Stream *stream, InstanceManager *manager) const {
 		PhaseFunction::serialize(stream, manager);
-
-		stream->writeFloat(m_g);
+		manager->serialize(stream, m_g.get());
 	}
 
 	void configure() {
 		PhaseFunction::configure();
+		if (m_g.get() == NULL)
+			Log(EError, "No g specified!");
 		m_type = EAngleDependence;
 	}
 
+	void addChild(const std::string &name, ConfigurableObject *child) {
+		if (child->getClass()->derivesFrom(MTS_CLASS(VolumeDataSource))) {
+			Assert(name == "g");
+			m_g = static_cast<VolumeDataSource *>(child);
+		}
+	}
+	
+	
 	inline Float sample(PhaseFunctionSamplingRecord &pRec,
 			Sampler *sampler) const {
 		Point2 sample(sampler->next2D());
-
+		Point p = pRec.mRec.p;
+		Float g = m_g->lookupFloat(p);
 		Float cosTheta;
-		if (std::abs(m_g) < Epsilon) {
+		if (std::abs(g) < Epsilon) {
 			cosTheta = 1 - 2*sample.x;
 		} else {
-			Float sqrTerm = (1 - m_g * m_g) / (1 - m_g + 2 * m_g * sample.x);
-			cosTheta = (1 + m_g * m_g - sqrTerm * sqrTerm) / (2 * m_g);
+			Float sqrTerm = (1 - g * g) / (1 - g + 2 * g * sample.x);
+			cosTheta = (1 + g * g - sqrTerm * sqrTerm) / (2 * g);
 		}
 
 		Float sinTheta = math::safe_sqrt(1.0f-cosTheta*cosTheta),
@@ -93,7 +102,6 @@ public:
 			sinTheta * sinPhi,
 			cosTheta
 		));
-
 		return 1.0f;
 	}
 
@@ -105,23 +113,29 @@ public:
 	}
 
 	Float eval(const PhaseFunctionSamplingRecord &pRec) const {
-		Float temp = 1.0f + m_g*m_g + 2.0f * m_g * dot(pRec.wi, pRec.wo);
-		return INV_FOURPI * (1 - m_g*m_g) / (temp * std::sqrt(temp));
+		Point p = pRec.mRec.p;
+		Float g = m_g->lookupFloat(p);
+		Float temp = 1.0f + g*g + 2.0f * g * dot(pRec.wi, pRec.wo);
+		return INV_FOURPI * (1 - g*g) / (temp * std::sqrt(temp));
 	}
 
 	Float getMeanCosine() const {
-		return m_g;
+		return 0;
+	}
+	
+	Float getMeanCosine(Point p) const {
+		return m_g->lookupFloat(p);
 	}
 
 	std::string toString() const {
 		std::ostringstream oss;
-		oss << "HGPhaseFunction[g=" << m_g << "]";
+		oss << "HGPhaseFunction[g=" << m_g.toString() << "]";
 		return oss.str();
 	}
 
 	MTS_DECLARE_CLASS()
-private:
-	Float m_g;
+protected:
+	ref<VolumeDataSource> m_g;
 };
 
 MTS_IMPLEMENT_CLASS_S(HGPhaseFunction, false, PhaseFunction)

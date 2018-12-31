@@ -70,8 +70,10 @@ class pyMedium(object):
         return albedo
     
     def set_hg_phase(self, g=0.85):
-        self.__phase = {'type' : 'hg',
-                        'g' : g}
+        self.__phase = {
+            'type': 'hg',
+            'g': {'type': 'constvolume', 'value': g},
+        }
     
     def get_mitsuba_phase(self):
         return self.__phase
